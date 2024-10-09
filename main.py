@@ -42,6 +42,15 @@ def overlay_pdf_on_background(pdf_file, output_stream):
         background_pdf = fitz.open(BACKGROUND_PDF_PATH)
         output_pdf = fitz.open()
 
+        # Verificar si los archivos PDF fueron cargados correctamente
+        if len(selected_pdf) == 0:
+            print("Error: El PDF cargado está vacío.")
+            return False
+        
+        if len(background_pdf) == 0:
+            print("Error: El PDF de fondo no fue cargado.")
+            return False
+
         for page_num in range(len(background_pdf)):
             background_page = background_pdf.load_page(page_num)
             new_page = output_pdf.new_page(width=background_page.rect.width, height=background_page.rect.height)
@@ -99,9 +108,11 @@ def overlay_pdf_on_background(pdf_file, output_stream):
         output_pdf.close()
         selected_pdf.close()
         background_pdf.close()
+        return True
 
     except Exception as e:
         print(f"Error overlaying PDFs: {e}")
+        return False
 
 # Ruta principal para la página de inicio
 @app.route('/')
@@ -122,7 +133,10 @@ def process_pdf():
     output_stream = BytesIO()
 
     # Generar el PDF enmarcado directamente en memoria
-    overlay_pdf_on_background(pdf_file, output_stream)
+    success = overlay_pdf_on_background(pdf_file, output_stream)
+
+    if not success:
+        return 'Error generando el PDF', 500
 
     # Enviar el archivo generado como una descarga
     output_stream.seek(0)  # Reiniciar el puntero al inicio del stream
@@ -130,3 +144,4 @@ def process_pdf():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
