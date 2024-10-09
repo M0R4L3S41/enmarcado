@@ -42,16 +42,17 @@ def overlay_pdf_on_background(pdf_file, output_stream):
             return False, f"Error: El archivo de fondo '{BACKGROUND_PDF_PATH}' no existe."
 
         # Leer el PDF subido en memoria
-        selected_pdf = fitz.open(stream=pdf_file.read(), filetype="pdf")
-        background_pdf = fitz.open(BACKGROUND_PDF_PATH)
-        output_pdf = fitz.open()
+        try:
+            selected_pdf = fitz.open(stream=pdf_file.read(), filetype="pdf")
+        except Exception as e:
+            return False, f"Error al cargar el archivo PDF: {e}"
 
-        # Verificar si los archivos PDF fueron cargados correctamente
+        # Verificar que el PDF cargado no esté vacío
         if len(selected_pdf) == 0:
             return False, "Error: El PDF cargado está vacío."
-        
-        if len(background_pdf) == 0:
-            return False, "Error: El PDF de fondo no fue cargado."
+
+        background_pdf = fitz.open(BACKGROUND_PDF_PATH)
+        output_pdf = fitz.open()
 
         # Superponer el contenido del PDF subido sobre el fondo
         for page_num in range(len(background_pdf)):
@@ -128,8 +129,13 @@ def process_pdf():
         return jsonify({"error": "No file uploaded"}), 400
 
     pdf_file = request.files['pdf_file']
+    
+    # Verificar que el archivo no esté vacío
     if pdf_file.filename == '':
         return jsonify({"error": "No selected file"}), 400
+
+    if pdf_file.content_length == 0:
+        return jsonify({"error": "El archivo PDF está vacío o no se ha subido correctamente."}), 400
 
     # Crear un objeto BytesIO para mantener el archivo generado en memoria
     output_stream = BytesIO()
