@@ -1,4 +1,4 @@
-Flask==2.0.3
-PyMuPDF==1.18.19
-qrcode==6.1
-gunicorn==20.1.0
+Flask==3.0.3
+PyMuPDF==1.24.10
+qrcode==7.4.2
+Werkzeug==3.0.2
