@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 import fitz  # PyMuPDF para manejar PDFs
 import qrcode
 import os
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -33,13 +34,26 @@ def generate_qr_code(text):
     img = qr.make_image(fill='black', back_color='white')
     return img
 
-# Función para superponer PDFs y agregar dos QRs
-def overlay_pdf_on_background(pdf_path, output_path):
+# Función para superponer PDFs y agregar dos QRs en memoria
+def overlay_pdf_on_background(pdf_file, output_stream):
     try:
-        selected_pdf = fitz.open(pdf_path)
+        # Verificar si el archivo de fondo existe
+        if not os.path.exists(BACKGROUND_PDF_PATH):
+            return False, f"Error: El archivo de fondo '{BACKGROUND_PDF_PATH}' no existe."
+
+        # Leer el PDF subido en memoria
+        selected_pdf = fitz.open(stream=pdf_file.read(), filetype="pdf")
         background_pdf = fitz.open(BACKGROUND_PDF_PATH)
         output_pdf = fitz.open()
 
+        # Verificar si los archivos PDF fueron cargados correctamente
+        if len(selected_pdf) == 0:
+            return False, "Error: El PDF cargado está vacío."
+        
+        if len(background_pdf) == 0:
+            return False, "Error: El PDF de fondo no fue cargado."
+
+        # Superponer el contenido del PDF subido sobre el fondo
         for page_num in range(len(background_pdf)):
             background_page = background_pdf.load_page(page_num)
             new_page = output_pdf.new_page(width=background_page.rect.width, height=background_page.rect.height)
@@ -47,11 +61,13 @@ def overlay_pdf_on_background(pdf_path, output_path):
 
             if page_num < len(selected_pdf):
                 selected_page = selected_pdf.load_page(page_num)
-                new_page.show_pdf_page(new_page.rect, selected_page, page_num)
+                new_page.show_pdf_page(new_page.rect, selected_pdf, page_num)
 
-        filename = os.path.basename(pdf_path)
+        # Procesar el nombre del archivo para generar el QR y manejar el PDF del estado correspondiente
+        filename = os.path.basename(pdf_file.filename)
         state_abbr = filename[11:13].upper()
 
+        # Verificar si existe el archivo de PDF para el estado
         if state_abbr in ESTADOS:
             state_pdf_path = os.path.join(MARCOS_FOLDER, f"{state_abbr}.pdf")
             if os.path.exists(state_pdf_path):
@@ -61,19 +77,17 @@ def overlay_pdf_on_background(pdf_path, output_path):
                     new_page.show_pdf_page(new_page.rect, state_pdf, state_page_num)
                 state_pdf.close()
 
+        # Generar y colocar los QR Codes
         qr_img = generate_qr_code(filename)
         qr_img = qr_img.resize((60, 60))
 
-        qr_img_path = "temp_qr.png"
-        qr_img.save(qr_img_path)
-
-        # Si hay más de una página, insertamos los QRs en la segunda página
+        # Si hay más de una página, insertar los QRs en la segunda página
         if len(output_pdf) > 1:
             second_page = output_pdf.load_page(1)
 
             # Primer QR (parte superior)
             qr_rect = fitz.Rect(34, 24, 95, 88)
-            second_page.insert_image(qr_rect, filename=qr_img_path)
+            second_page.insert_image(qr_rect, pixmap=qr_img)
 
             first_18_chars = filename[:18]
             second_page.insert_text((qr_rect.x0 - 7, qr_rect.y1 + 10), first_18_chars, fontsize=7, color=(0.5, 0.5, 0.5))
@@ -90,40 +104,45 @@ def overlay_pdf_on_background(pdf_path, output_path):
                 (20 + qr_size_small + move_right),
                 (page_height - 10) - move_up
             )
-            second_page.insert_image(qr_rect_bottom_left, filename=qr_img_path)
+            second_page.insert_image(qr_rect_bottom_left, pixmap=qr_img)
 
-        output_pdf.save(output_path)
+        # Guardar el archivo en el stream de salida (en memoria)
+        output_pdf.save(output_stream)
         output_pdf.close()
         selected_pdf.close()
         background_pdf.close()
+        return True, "PDF generado correctamente."
 
     except Exception as e:
-        print(f"Error overlaying PDFs: {e}")
+        return False, f"Error al generar el PDF: {e}"
 
 # Ruta principal para la página de inicio
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Ruta para procesar el enmarcado de PDFs
+# Ruta para procesar el enmarcado de PDFs sin guardar en disco
 @app.route('/process_pdf', methods=['POST'])
 def process_pdf():
     if 'pdf_file' not in request.files:
-        return 'No file uploaded', 400
+        return jsonify({"error": "No file uploaded"}), 400
 
     pdf_file = request.files['pdf_file']
     if pdf_file.filename == '':
-        return 'No selected file', 400
+        return jsonify({"error": "No selected file"}), 400
 
-    # Guardar el PDF subido
-    pdf_path = os.path.join('static', pdf_file.filename)
-    pdf_file.save(pdf_path)
+    # Crear un objeto BytesIO para mantener el archivo generado en memoria
+    output_stream = BytesIO()
 
-    # Generar el PDF enmarcado
-    output_path = os.path.join('static', f"marcado_{pdf_file.filename}")
-    overlay_pdf_on_background(pdf_path, output_path)
+    # Generar el PDF enmarcado directamente en memoria
+    success, message = overlay_pdf_on_background(pdf_file, output_stream)
 
-    return send_file(output_path, as_attachment=True)
+    if not success:
+        return jsonify({"error": message}), 500
+
+    # Enviar el archivo generado como una descarga
+    output_stream.seek(0)  # Reiniciar el puntero al inicio del stream
+    return send_file(output_stream, as_attachment=True, download_name=f"marcado_{pdf_file.filename}", mimetype='application/pdf')
 
 if __name__ == '__main__':
     app.run(debug=True)
