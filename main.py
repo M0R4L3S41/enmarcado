@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, send_file
 import fitz  # PyMuPDF para manejar PDFs
 import qrcode
 import os
-from io import BytesIO
 
 app = Flask(__name__)
 
@@ -34,11 +33,10 @@ def generate_qr_code(text):
     img = qr.make_image(fill='black', back_color='white')
     return img
 
-# Función para superponer PDFs y agregar dos QRs en memoria
-def overlay_pdf_on_background(pdf_file, output_stream):
+# Función para superponer PDFs y agregar dos QRs
+def overlay_pdf_on_background(pdf_path, output_path):
     try:
-        # Leer el PDF subido en memoria
-        selected_pdf = fitz.open(stream=pdf_file.read(), filetype="pdf")
+        selected_pdf = fitz.open(pdf_path)
         background_pdf = fitz.open(BACKGROUND_PDF_PATH)
         output_pdf = fitz.open()
 
@@ -49,9 +47,9 @@ def overlay_pdf_on_background(pdf_file, output_stream):
 
             if page_num < len(selected_pdf):
                 selected_page = selected_pdf.load_page(page_num)
-                new_page.show_pdf_page(new_page.rect, selected_pdf, page_num)
+                new_page.show_pdf_page(new_page.rect, selected_page, page_num)
 
-        filename = os.path.basename(pdf_file.filename)
+        filename = os.path.basename(pdf_path)
         state_abbr = filename[11:13].upper()
 
         if state_abbr in ESTADOS:
@@ -94,8 +92,7 @@ def overlay_pdf_on_background(pdf_file, output_stream):
             )
             second_page.insert_image(qr_rect_bottom_left, filename=qr_img_path)
 
-        # Guardar el archivo en el stream de salida (en memoria)
-        output_pdf.save(output_stream)
+        output_pdf.save(output_path)
         output_pdf.close()
         selected_pdf.close()
         background_pdf.close()
@@ -108,7 +105,7 @@ def overlay_pdf_on_background(pdf_file, output_stream):
 def index():
     return render_template('index.html')
 
-# Ruta para procesar el enmarcado de PDFs sin guardar en disco
+# Ruta para procesar el enmarcado de PDFs
 @app.route('/process_pdf', methods=['POST'])
 def process_pdf():
     if 'pdf_file' not in request.files:
@@ -118,15 +115,15 @@ def process_pdf():
     if pdf_file.filename == '':
         return 'No selected file', 400
 
-    # Crear un objeto BytesIO para mantener el archivo generado en memoria
-    output_stream = BytesIO()
+    # Guardar el PDF subido
+    pdf_path = os.path.join('static', pdf_file.filename)
+    pdf_file.save(pdf_path)
 
-    # Generar el PDF enmarcado directamente en memoria
-    overlay_pdf_on_background(pdf_file, output_stream)
+    # Generar el PDF enmarcado
+    output_path = os.path.join('static', f"marcado_{pdf_file.filename}")
+    overlay_pdf_on_background(pdf_path, output_path)
 
-    # Enviar el archivo generado como una descarga
-    output_stream.seek(0)  # Reiniciar el puntero al inicio del stream
-    return send_file(output_stream, as_attachment=True, download_name=f"marcado_{pdf_file.filename}", mimetype='application/pdf')
+    return send_file(output_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
