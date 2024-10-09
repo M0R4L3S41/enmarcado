@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Enmarcado</title>
+    <link rel="stylesheet" href="/static/style.css"> <!-- Asegúrate de que el archivo CSS esté en la carpeta 'static' -->
+    <script>
+        // Esta función detecta cuando se selecciona un archivo y envía el formulario automáticamente
+        function onFileSelected() {
+            document.getElementById('pdfForm').submit();  // Enviar el formulario automáticamente
+        }
+    </script>
+</head>
+<body>
+    <h1>Enmarcar</h1>
+
+    <!-- Formulario para subir el archivo -->
+    <form id="pdfForm" action="/process_pdf" method="POST" enctype="multipart/form-data">
+        <input type="file" name="pdf_file" accept="application/pdf" onchange="onFileSelected()">
+    </form>
+</body>
+</html>
