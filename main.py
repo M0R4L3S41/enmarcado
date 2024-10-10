@@ -3,6 +3,7 @@ import fitz  # PyMuPDF para manejar PDFs
 import qrcode
 import os
 from io import BytesIO
+from PIL import Image  # Importar la biblioteca Pillow
 
 app = Flask(__name__)
 
@@ -36,11 +37,17 @@ def generate_qr_code(text):
     qr.make(fit=True)
     img = qr.make_image(fill='black', back_color='white')
 
-    # Guardar la imagen en un stream de bytes en lugar de un archivo
+    # Convertir la imagen de QR a formato PNG utilizando Pillow
     img_byte_array = BytesIO()
-    img.save(img_byte_array, format='PNG')
+    img.save(img_byte_array)  # Guardar en BytesIO sin el argumento 'format'
     img_byte_array.seek(0)  # Mover el puntero al inicio
-    return img_byte_array
+
+    # Cargar la imagen de QR como un objeto Pixmap de PyMuPDF
+    pil_image = Image.open(img_byte_array)
+    rgb_image = pil_image.convert('RGB')
+    qr_img_fitz = fitz.Pixmap(fitz.csRGB, rgb_image.tobytes(), pil_image.size[0], pil_image.size[1])
+    
+    return qr_img_fitz
 
 # Función para superponer PDFs y agregar dos QRs en memoria
 def overlay_pdf_on_background(pdf_file, output_stream):
@@ -86,7 +93,6 @@ def overlay_pdf_on_background(pdf_file, output_stream):
 
         # Generar y colocar los QR Codes en memoria
         qr_img = generate_qr_code(filename)
-        qr_img = fitz.Pixmap(qr_img)
 
         # Si hay más de una página, insertar los QRs en la segunda página
         if len(output_pdf) > 1:
@@ -164,3 +170,4 @@ def process_pdf():
 # Configuración del servidor para producción o local
 if __name__ == '__main__':
     app.run(debug=os.getenv("FLASK_DEBUG", False), host='0.0.0.0', port=os.getenv("PORT", 5000))
+
