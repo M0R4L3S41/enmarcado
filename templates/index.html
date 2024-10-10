@@ -1,16 +1,22 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generar PDF Enmarcado</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>PDF Enmarcado</title>
+    <script>
+        // Esta función detecta cuando se selecciona un archivo y envía el formulario automáticamente
+        function onFileSelected() {
+            document.getElementById('pdfForm').submit();  // Enviar el formulario automáticamente
+        }
+    </script>
 </head>
 <body>
-    <h1>Subir PDF para enmarcar</h1>
-    <form action="/process_pdf" method="POST" enctype="multipart/form-data">
-        <input type="file" name="pdf_file" accept=".pdf" required>
-        <button type="submit">Generar PDF Enmarcado</button>
+    <h1>Subir PDF para Enmarcar Automáticamente</h1>
+
+    <!-- Formulario para subir el archivo -->
+    <form id="pdfForm" action="/process_pdf" method="POST" enctype="multipart/form-data">
+        <input type="file" name="pdf_file" accept="application/pdf" onchange="onFileSelected()">  <!-- Auto-envía al seleccionar archivo -->
     </form>
 </body>
 </html>
