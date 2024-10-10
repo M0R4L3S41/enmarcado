@@ -6,6 +6,9 @@ from io import BytesIO
 
 app = Flask(__name__)
 
+# Configuración para el tamaño máximo de archivos (16 MB)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+
 # Ruta al archivo de fondo
 BACKGROUND_PDF_PATH = "static/marcoparaactas.pdf"
 MARCOS_FOLDER = "static/marcostraceros"
@@ -129,7 +132,11 @@ def process_pdf():
         return jsonify({"error": "No file uploaded"}), 400
 
     pdf_file = request.files['pdf_file']
-    
+
+    # Agrega estos prints para verificar los detalles del archivo
+    print("Nombre del archivo:", pdf_file.filename)
+    print("Tamaño del archivo:", pdf_file.content_length)
+
     # Verificar que el archivo no esté vacío
     if pdf_file.filename == '':
         return jsonify({"error": "No selected file"}), 400
