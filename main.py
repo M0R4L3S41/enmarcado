@@ -39,13 +39,11 @@ def generate_qr_code(text):
 
     # Convertir la imagen de QR a formato PNG utilizando Pillow
     img_byte_array = BytesIO()
-    img.save(img_byte_array)  # Guardar en BytesIO sin el argumento 'format'
+    img.save(img_byte_array, format="PNG")  # Guardar en BytesIO como PNG
     img_byte_array.seek(0)  # Mover el puntero al inicio
 
-    # Cargar la imagen de QR como un objeto Pixmap de PyMuPDF
-    pil_image = Image.open(img_byte_array)
-    rgb_image = pil_image.convert('RGB')
-    qr_img_fitz = fitz.Pixmap(fitz.csRGB, rgb_image.tobytes(), pil_image.size[0], pil_image.size[1])
+    # Crear un Pixmap de PyMuPDF desde el stream de bytes PNG
+    qr_img_fitz = fitz.Pixmap(fitz.open(img_byte_array))  # Cargar imagen PNG en Pixmap
     
     return qr_img_fitz
 
@@ -170,4 +168,3 @@ def process_pdf():
 # Configuración del servidor para producción o local
 if __name__ == '__main__':
     app.run(debug=os.getenv("FLASK_DEBUG", False), host='0.0.0.0', port=os.getenv("PORT", 5000))
-
