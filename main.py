@@ -24,7 +24,7 @@ ESTADOS = {
     "VZ": "VERACRUZ", "YN": "YUCATÁN", "ZS": "ZACATECAS", "NE": "NACIDO EN EL EXTRANJERO"
 }
 
-# Función para generar el código QR
+# Función para generar el código QR en memoria (BytesIO)
 def generate_qr_code(text):
     qr = qrcode.QRCode(
         version=1,
@@ -35,7 +35,12 @@ def generate_qr_code(text):
     qr.add_data(text)
     qr.make(fit=True)
     img = qr.make_image(fill='black', back_color='white')
-    return img
+
+    # Guardar la imagen en un stream de bytes en lugar de un archivo
+    img_byte_array = BytesIO()
+    img.save(img_byte_array, format='PNG')
+    img_byte_array.seek(0)  # Mover el puntero al inicio
+    return img_byte_array
 
 # Función para superponer PDFs y agregar dos QRs en memoria
 def overlay_pdf_on_background(pdf_file, output_stream):
@@ -57,7 +62,6 @@ def overlay_pdf_on_background(pdf_file, output_stream):
         background_pdf = fitz.open(BACKGROUND_PDF_PATH)
         output_pdf = fitz.open()
 
-        # Superponer el contenido del PDF subido sobre el fondo
         for page_num in range(len(background_pdf)):
             background_page = background_pdf.load_page(page_num)
             new_page = output_pdf.new_page(width=background_page.rect.width, height=background_page.rect.height)
@@ -71,7 +75,6 @@ def overlay_pdf_on_background(pdf_file, output_stream):
         filename = os.path.basename(pdf_file.filename)
         state_abbr = filename[11:13].upper()
 
-        # Verificar si existe el archivo de PDF para el estado
         if state_abbr in ESTADOS:
             state_pdf_path = os.path.join(MARCOS_FOLDER, f"{state_abbr}.pdf")
             if os.path.exists(state_pdf_path):
@@ -81,9 +84,9 @@ def overlay_pdf_on_background(pdf_file, output_stream):
                     new_page.show_pdf_page(new_page.rect, state_pdf, state_page_num)
                 state_pdf.close()
 
-        # Generar y colocar los QR Codes
+        # Generar y colocar los QR Codes en memoria
         qr_img = generate_qr_code(filename)
-        qr_img = qr_img.resize((60, 60))
+        qr_img = fitz.Pixmap(qr_img)
 
         # Si hay más de una página, insertar los QRs en la segunda página
         if len(output_pdf) > 1:
@@ -118,6 +121,7 @@ def overlay_pdf_on_background(pdf_file, output_stream):
         return True, "PDF generado correctamente."
 
     except Exception as e:
+        print(f"Error overlaying PDFs: {e}")
         return False, f"Error al generar el PDF: {e}"
 
 # Ruta principal para la página de inicio
@@ -128,38 +132,35 @@ def index():
 # Ruta para procesar el enmarcado de PDFs sin guardar en disco
 @app.route('/process_pdf', methods=['POST'])
 def process_pdf():
-    if 'pdf_file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
+    try:
+        if 'pdf_file' not in request.files:
+            print("No file in request.files")
+            return 'No file uploaded', 400
 
-    pdf_file = request.files['pdf_file']
+        pdf_file = request.files['pdf_file']
+        print(f"Archivo recibido: {pdf_file.filename}")
+        
+        if pdf_file.filename == '':
+            print("No file selected")
+            return 'No selected file', 400
 
-    # Agrega estos prints para verificar los detalles del archivo
-    print("Nombre del archivo:", pdf_file.filename)
-    print("Tamaño del archivo:", pdf_file.content_length)
+        # Crear un objeto BytesIO para mantener el archivo generado en memoria
+        output_stream = BytesIO()
 
-    # Verificar que el archivo no esté vacío
-    if pdf_file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
+        # Generar el PDF enmarcado directamente en memoria
+        success, message = overlay_pdf_on_background(pdf_file, output_stream)
+        if not success:
+            print(f"Error generando el PDF: {message}")
+            return message, 500
 
-    if pdf_file.content_length == 0:
-        return jsonify({"error": "El archivo PDF está vacío o no se ha subido correctamente."}), 400
+        # Enviar el archivo generado como una descarga
+        output_stream.seek(0)  # Reiniciar el puntero al inicio del stream
+        return send_file(output_stream, as_attachment=True, download_name=f"marcado_{pdf_file.filename}", mimetype='application/pdf')
 
-    # Crear un objeto BytesIO para mantener el archivo generado en memoria
-    output_stream = BytesIO()
+    except Exception as e:
+        print(f"Error procesando PDF: {e}")
+        return 'Error procesando archivo PDF', 500
 
-    # Generar el PDF enmarcado directamente en memoria
-    success, message = overlay_pdf_on_background(pdf_file, output_stream)
-
-    if not success:
-        return jsonify({"error": message}), 500
-
-    # Enviar el archivo generado como una descarga
-    output_stream.seek(0)  # Reiniciar el puntero al inicio del stream
-    return send_file(output_stream, as_attachment=True, download_name=f"marcado_{pdf_file.filename}", mimetype='application/pdf')
-
+# Configuración del servidor para producción o local
 if __name__ == '__main__':
-    app.run(debug=True)
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.getenv("FLASK_DEBUG", False), host='0.0.0.0', port=os.getenv("PORT", 5000))
