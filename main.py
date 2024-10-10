@@ -43,7 +43,7 @@ def generate_qr_code(text):
     img_byte_array.seek(0)  # Mover el puntero al inicio
 
     # Crear un Pixmap de PyMuPDF desde el stream de bytes PNG
-    qr_img_fitz = fitz.Pixmap(fitz.open(img_byte_array))  # Cargar imagen PNG en Pixmap
+    qr_img_fitz = fitz.Pixmap(img_byte_array)  # Cargar imagen PNG directamente en Pixmap
     
     return qr_img_fitz
 
