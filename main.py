@@ -4,6 +4,7 @@ import qrcode
 import os
 from io import BytesIO
 from PIL import Image  # Importar la biblioteca Pillow
+from datetime import datetime  # Importar datetime para manejar horas
 
 app = Flask(__name__)
 
@@ -24,6 +25,13 @@ ESTADOS = {
     "SL": "SINALOA", "SR": "SONORA", "TC": "TABASCO", "TS": "TAMAULIPAS", "TL": "TLAXCALA",
     "VZ": "VERACRUZ", "YN": "YUCATÁN", "ZS": "ZACATECAS", "NE": "NACIDO EN EL EXTRANJERO"
 }
+
+# Función para verificar si el sistema está dentro del horario de funcionamiento
+def is_within_working_hours():
+    now = datetime.now()
+    start_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    end_time = now.replace(hour=17, minute=0, second=0, microsecond=0)
+    return start_time <= now <= end_time
 
 # Función para generar el código QR en memoria (BytesIO)
 def generate_qr_code(text):
@@ -131,11 +139,15 @@ def overlay_pdf_on_background(pdf_file, output_stream):
 # Ruta principal para la página de inicio
 @app.route('/')
 def index():
+    if not is_within_working_hours():
+        return "El servicio no está disponible fuera del horario de 9 AM a 5 PM.", 403
     return render_template('index.html')
 
 # Ruta para procesar el enmarcado de PDFs sin guardar en disco
 @app.route('/process_pdf', methods=['POST'])
 def process_pdf():
+    if not is_within_working_hours():
+        return "El servicio no está disponible fuera del horario de 9 AM a 5 PM.", 403
     try:
         if 'pdf_file' not in request.files:
             print("No file in request.files")
