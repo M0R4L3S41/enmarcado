@@ -30,13 +30,16 @@ ESTADOS = {
 # Definir la zona horaria de México
 mexico_timezone = pytz.timezone('America/Mexico_City')
 
-# Función para verificar si el sistema está dentro del horario de funcionamiento (9 AM - 5 PM hora de México)
 def is_within_working_hours():
     # Obtener la hora actual en UTC y convertirla a la zona horaria de México
     now = datetime.now(pytz.utc).astimezone(mexico_timezone)
     
     # Imprimir la hora actual del servidor en la zona horaria de México
     print(f"Hora actual del servidor (Hora México): {now.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Verificar si es un día entre lunes (0) y viernes (4)
+    if now.weekday() > 4:
+        return False  # Es sábado o domingo, no está disponible
 
     # Definir el horario de trabajo (9 AM a 5 PM)
     start_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
