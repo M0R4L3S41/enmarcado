@@ -4,6 +4,8 @@ import qrcode
 import os
 from io import BytesIO
 from PIL import Image  # Importar la biblioteca Pillow
+from datetime import datetime  # Para manejar fechas y horas
+import pytz  # Para manejar zonas horarias
 
 app = Flask(__name__)
 
@@ -24,6 +26,24 @@ ESTADOS = {
     "SL": "SINALOA", "SR": "SONORA", "TC": "TABASCO", "TS": "TAMAULIPAS", "TL": "TLAXCALA",
     "VZ": "VERACRUZ", "YN": "YUCATÁN", "ZS": "ZACATECAS", "NE": "NACIDO EN EL EXTRANJERO"
 }
+
+# Definir la zona horaria de México
+mexico_timezone = pytz.timezone('America/Mexico_City')
+
+# Función para verificar si el sistema está dentro del horario de funcionamiento (9 AM - 5 PM hora de México)
+def is_within_working_hours():
+    # Obtener la hora actual en UTC y convertirla a la zona horaria de México
+    now = datetime.now(pytz.utc).astimezone(mexico_timezone)
+    
+    # Imprimir la hora actual del servidor en la zona horaria de México
+    print(f"Hora actual del servidor (Hora México): {now.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Definir el horario de trabajo (9 AM a 5 PM)
+    start_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    end_time = now.replace(hour=17, minute=0, second=0, microsecond=0)
+
+    # Verificar si la hora actual está dentro del horario permitido
+    return start_time <= now <= end_time
 
 # Función para generar el código QR en memoria (BytesIO)
 def generate_qr_code(text):
@@ -131,11 +151,15 @@ def overlay_pdf_on_background(pdf_file, output_stream):
 # Ruta principal para la página de inicio
 @app.route('/')
 def index():
+    if not is_within_working_hours():
+        return "El servicio no está disponible fuera del horario de 9 AM a 5 PM.", 403
     return render_template('index.html')
 
 # Ruta para procesar el enmarcado de PDFs sin guardar en disco
 @app.route('/process_pdf', methods=['POST'])
 def process_pdf():
+    if not is_within_working_hours():
+        return "El servicio no está disponible fuera del horario de 9 AM a 5 PM.", 403
     try:
         if 'pdf_file' not in request.files:
             print("No file in request.files")
