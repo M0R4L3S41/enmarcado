@@ -38,7 +38,7 @@ def is_within_working_hours():
     print(f"Hora actual del servidor (Hora México): {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Verificar si es un día entre lunes (0) y viernes (4)
-    if now.weekday() > 4:
+    if now.weekday() > 5:
         return False  # Es sábado o domingo, no está disponible
 
     # Definir el horario de trabajo (9 AM a 5 PM)
