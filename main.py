@@ -42,7 +42,7 @@ def is_within_working_hours():
         return False  # Es sábado o domingo, no está disponible
 
     # Definir el horario de trabajo (9 AM a 5 PM)
-    start_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    start_time = now.replace(hour=8, minute=0, second=0, microsecond=0)
     end_time = now.replace(hour=17, minute=0, second=0, microsecond=0)
 
     # Verificar si la hora actual está dentro del horario permitido
