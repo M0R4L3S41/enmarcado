@@ -11,10 +11,10 @@ app.permanent_session_lifetime = timedelta(minutes=30)
 # Configuración de la base de datos
 def conectar_db():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",  # Coloca tu contraseña de MySQL
-        database="regis112_enmarcado"
+        host=os.environ.get('MYSQL_HOST'),
+        user=os.environ.get('MYSQL_USER'),
+        password=os.environ.get('MYSQL_PASSWORD'),
+        database=os.environ.get('MYSQL_DATABASE')
     )
 
 # Registrar el Blueprint del módulo de enmarcado
