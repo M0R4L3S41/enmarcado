@@ -1,18 +1,20 @@
-import os 
+import os
 from flask import Flask, render_template, request, redirect, session, url_for, flash
 from flask_socketio import SocketIO, emit, disconnect
 from datetime import timedelta
 import mysql.connector
-from enmarcado import enmarcado_bp 
+from enmarcado import enmarcado_bp
 
-app = Flask(__name__)
+# Instancia única de Flask
+app = Flask(_name_)
 app.secret_key = 'supersecretkey'
-app.permanent_session_lifetime = timedelta(days=7)  # Sesión persistente de 7 días
+app.permanent_session_lifetime = timedelta(days=7)
+
+# Registrar el Blueprint
 app.register_blueprint(enmarcado_bp)
 
 # Configuración de SocketIO
 socketio = SocketIO(app)
-
 def conectar_db():
     return mysql.connector.connect(
         host=os.environ.get('MYSQL_HOST'),
@@ -226,5 +228,5 @@ def disconnect_handler():
     if user_id and user_id in active_sessions:
         del active_sessions[user_id]
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
