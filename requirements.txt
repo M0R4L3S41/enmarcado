@@ -1,11 +1,10 @@
-Flask==3.0.3
-PyMuPDF==1.24.10
-qrcode==7.4.2
-Werkzeug==3.0.2
-Pillow
-pytz
+Flask==2.2.5               # Evita conflictos con Flask-SocketIO
+Flask-SocketIO
+eventlet
 gunicorn==20.1.0
 mysql-connector-python
-Flask
-Flask-SocketIO
-eventlet 
+PyMuPDF==1.24.10
+qrcode==7.4.2
+Pillow
+pytz
+Werkzeug==3.0.2
