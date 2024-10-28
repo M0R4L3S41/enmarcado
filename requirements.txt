@@ -6,3 +6,6 @@ Pillow
 pytz
 gunicorn==20.1.0
 mysql-connector-python
+Flask
+Flask-SocketIO
+eventlet 
