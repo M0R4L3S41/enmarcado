@@ -27,6 +27,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 5000
 
 # Comando para ejecutar la aplicación Flask usando gunicorn
-CMD ["gunicorn", "-w", "4", "-k", "gevent", "-b", "0.0.0.0:5000", "app:socketio"]
+CMD ["gunicorn", "-w", "4", "-k", "gevent", "-b", "0.0.0.0:5001", "app:socketio"]
 
 
