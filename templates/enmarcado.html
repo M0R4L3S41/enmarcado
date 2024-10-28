@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Enmarcado</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        // Función para enviar el formulario automáticamente cuando se selecciona un archivo
+        function onFileSelected() {
+            document.getElementById('pdfForm').submit();
+        }
+    </script>
+</head>
+<body>
+    <h1>Subir PDF para Enmarcar Automáticamente</h1>
+    <form id="pdfForm" action="/process_pdf" method="POST" enctype="multipart/form-data">
+        <input type="file" name="pdf_file" accept="application/pdf" onchange="onFileSelected()"> <!-- Enviar al seleccionar -->
+    </form>
+    <a href="{{ url_for('logout') }}">Cerrar Sesión</a>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io();  // Asegúrate de que Socket.IO esté bien cargado y conectado.
+    
+        // Manejar el evento de cierre de sesión forzado
+        socket.on('force_logout', (data) => {
+            alert(data.message);
+            window.location.href = '/login';  // Redirige al usuario a la página de login
+        });
+    
+        // Función para enviar el formulario automáticamente cuando se selecciona un archivo
+        function onFileSelected() {
+            document.getElementById('pdfForm').submit();
+        }
+    </script>
+    
+</body>
+</html>
